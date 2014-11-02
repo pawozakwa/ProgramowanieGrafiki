@@ -1,3 +1,9 @@
+/************************* 
+*	Autor: Paweł Woźnica
+*
+*
+**************************/
+
 // Include standard headers
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,25 +35,24 @@ mat4 Przesun(float x, float y, float z){
 
 void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 
-		//Funkcja rysuje dana ilosc trojkatow(3arg) na danej tablicy punktów(1arg)
-		//		pod podanym indeksem(2arg)
+	//Funkcja rysuje dana ilosc trojkatow(3arg) na danej tablicy punktów(1arg)
+	//		pod podanym indeksem(2arg)
 
-		glBindBuffer(GL_ARRAY_BUFFER, tablicaBufora[indexTablicyBufora]);
-		glVertexAttribPointer(
-			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-			);
+	glBindBuffer(GL_ARRAY_BUFFER, tablicaBufora[indexTablicyBufora]);
+	glVertexAttribPointer(
+		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+		3,                  // size
+		GL_FLOAT,           // type
+		GL_FALSE,           // normalized?
+		0,                  // stride
+		(void*)0            // array buffer offset
+		);
 
 
-		// Rysuj Prymitywy !
-		glDrawArrays(GL_TRIANGLES, 0, iloscTrojkatow*3); // 12 trojkatow
+	// Rysuj Prymitywy !
+	glDrawArrays(GL_TRIANGLES, 0, iloscTrojkatow*3); // 12 trojkatow
 
 }
-
 
 
 int main( void )
@@ -59,13 +64,29 @@ int main( void )
 		return -1;
 	}
 
+	vec3 pozycja = vec3(-3, 1, -5);
+
+	int szerokoscEkranu = 1024;
+	int wysokoscEkranu = 768;
+
+	float katPoziomy = 3.14f;
+	float katPionowy = 0.0f;
+
+	float katWidzenia = 45.0f;
+
+	float predkosc = 3.0f;
+	float czuloscMyszy = 0.001f;
+
+	double xMouse, yMouse;
+
+
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	window = glfwCreateWindow( 1024, 768, "Tutorial 02 - Red triangle", NULL, NULL);
+	window = glfwCreateWindow(szerokoscEkranu, wysokoscEkranu, "Silniczek Pawla", NULL, NULL);
 	if( window == NULL ){
 		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
 		glfwTerminate();
@@ -96,60 +117,44 @@ int main( void )
 	GLuint MatrixID = glGetUniformLocation(programID, "MVP");
 
 
-	//Macierz projekcji czyli wyświetlanego obszaru
-	mat4 Projekcja = perspective(60.0f, 16.0f / 9.0f, 0.1f, 100.0f);
-
-	// Macierz kamery czyli gdzie i w ktorym kierunku patrzy kamera
-	mat4 Kamera = lookAt(glm::vec3(2,5,7), glm::vec3(0,0,0), glm::vec3(0,1,0));
-
-	//Macierz modelu
-	mat4 Model = mat4(1.0f);
-
-
-	//Iloczyn Modelu, Kamery i Projekcji
-	//		Ewentualnie translacji, rotacji i tak dalej
-	mat4 MVP = Projekcja*Kamera*Model;
-
-	mat4 MVPkwadratu = Projekcja*Kamera*Przesun(-4, 0, 0)*Model;
-
-	mat4 MVPkostki = Projekcja*Kamera*Przesun(4, 1, 0)*Model;
-
+	//Deklaracje macierzy
+	mat4 Projekcja, Kamera, Model, MVP, MVPkwadratu, MVPkostki;
 
 	static const GLfloat g_wierzcholki_piramidy[] = {
 		//piramida
 
 		//podstawa
 		-1.0f, 0.0f,-1.0f,
-		 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f,
 		-1.0f, 0.0f, 1.0f,
 
 		-1.0f, 0.0f, 1.0f,
-		 0.0f, 0.0f, 0.0f,
-		 1.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 1.0f,
 
-		 1.0f, 0.0f,-1.0f,
-		 0.0f, 0.0f, 0.0f,
-		 1.0f, 0.0f, 1.0f,
-		 
-		 1.0f, 0.0f,-1.0f,
-		 0.0f, 0.0f, 0.0f,
+		1.0f, 0.0f,-1.0f,
+		0.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 1.0f,
+
+		1.0f, 0.0f,-1.0f,
+		0.0f, 0.0f, 0.0f,
 		-1.0f, 0.0f,-1.0f,
 
 		//scianki
 		-1.0f, 0.0f,-1.0f,
-		 0.0f, 1.5f, 0.0f,
+		0.0f, 1.5f, 0.0f,
 		-1.0f, 0.0f, 1.0f,
 
 		-1.0f, 0.0f, 1.0f,
-		 0.0f, 1.5f, 0.0f,
-		 1.0f, 0.0f, 1.0f,
-		 
-		 1.0f, 0.0f,-1.0f,
-		 0.0f, 1.5f, 0.0f,
-		 1.0f, 0.0f, 1.0f,
-		 
-		 1.0f, 0.0f,-1.0f,
-		 0.0f, 1.5f, 0.0f,
+		0.0f, 1.5f, 0.0f,
+		1.0f, 0.0f, 1.0f,
+
+		1.0f, 0.0f,-1.0f,
+		0.0f, 1.5f, 0.0f,
+		1.0f, 0.0f, 1.0f,
+
+		1.0f, 0.0f,-1.0f,
+		0.0f, 1.5f, 0.0f,
 		-1.0f, 0.0f,-1.0f
 	};
 
@@ -158,19 +163,19 @@ int main( void )
 
 		//srodek
 		-1.0f, 0.0f,-1.0f,
-		 0.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f,
 		-1.0f, 0.0f, 1.0f,
 
 		-1.0f, 0.0f, 1.0f,
-		 0.0f, 0.0f, 0.0f,
-		 1.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 1.0f,
 
-		 1.0f, 0.0f,-1.0f,
-		 0.0f, 0.0f, 0.0f,
-		 1.0f, 0.0f, 1.0f,
-		 
-		 1.0f, 0.0f,-1.0f,
-		 0.0f, 0.0f, 0.0f,
+		1.0f, 0.0f,-1.0f,
+		0.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 1.0f,
+
+		1.0f, 0.0f,-1.0f,
+		0.0f, 0.0f, 0.0f,
 		-1.0f, 0.0f,-1.0f,
 
 		//zewnetrzne trojaty
@@ -179,15 +184,15 @@ int main( void )
 		-1.0f, 0.0f, 1.0f,
 
 		-1.0f, 0.0f, 1.0f,
-		 0.0f, 0.0f, 2.0f,
-		 1.0f, 0.0f, 1.0f,
-		 
-		 1.0f, 0.0f,-1.0f,
-		 2.0f, 0.0f, 0.0f,
-		 1.0f, 0.0f, 1.0f,
-		 
-		 1.0f, 0.0f,-1.0f,
-		 0.0f, 0.0f,-2.0f,
+		0.0f, 0.0f, 2.0f,
+		1.0f, 0.0f, 1.0f,
+
+		1.0f, 0.0f,-1.0f,
+		2.0f, 0.0f, 0.0f,
+		1.0f, 0.0f, 1.0f,
+
+		1.0f, 0.0f,-1.0f,
+		0.0f, 0.0f,-2.0f,
 		-1.0f, 0.0f,-1.0f
 	};
 
@@ -195,52 +200,52 @@ int main( void )
 	static const GLfloat g_wierzcholki_kostki[] = { 
 		//prostopadloscian
 		-1.0f,-1.0f,-1.0f, // triangle 1 : begin
-        -1.0f,-1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f, // triangle 1 : end
+		-1.0f,-1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f, // triangle 1 : end
 
-         1.0f, 1.0f,-1.0f, // triangle 2 : begin
-        -1.0f,-1.0f,-1.0f,
-        -1.0f, 1.0f,-1.0f, // triangle 2 : end
+		1.0f, 1.0f,-1.0f, // triangle 2 : begin
+		-1.0f,-1.0f,-1.0f,
+		-1.0f, 1.0f,-1.0f, // triangle 2 : end
 
-         1.0f,-1.0f, 1.0f,
-        -1.0f,-1.0f,-1.0f,
-         1.0f,-1.0f,-1.0f,
+		1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f,-1.0f,
+		1.0f,-1.0f,-1.0f,
 
-         1.0f, 1.0f,-1.0f,
-         1.0f,-1.0f,-1.0f,
-        -1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f,-1.0f,
+		1.0f,-1.0f,-1.0f,
+		-1.0f,-1.0f,-1.0f,
 
-        -1.0f,-1.0f,-1.0f,
-        -1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f,-1.0f,
+		-1.0f,-1.0f,-1.0f,
+		-1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f,-1.0f,
 
-         1.0f,-1.0f, 1.0f,
-        -1.0f,-1.0f, 1.0f,
-        -1.0f,-1.0f,-1.0f,
+		1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f,-1.0f,
 
-        -1.0f, 1.0f, 1.0f,
-        -1.0f,-1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f,
+		-1.0f,-1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f,
 
-         1.0f, 1.0f, 1.0f,
-         1.0f,-1.0f,-1.0f,
-         1.0f, 1.0f,-1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f,-1.0f,
 
-         1.0f,-1.0f,-1.0f,
-         1.0f, 1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f,
+		1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f,
 
-         1.0f, 1.0f, 1.0f,
-         1.0f, 1.0f,-1.0f,
-        -1.0f, 1.0f,-1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f,-1.0f,
+		-1.0f, 1.0f,-1.0f,
 
-         1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f,-1.0f,
-        -1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f,-1.0f,
+		-1.0f, 1.0f, 1.0f,
 
-         1.0f, 1.0f, 1.0f,
-        -1.0f, 1.0f, 1.0f,
-         1.0f,-1.0f, 1.0f
+		1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f
 	};
 
 
@@ -350,11 +355,11 @@ int main( void )
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[1]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_wierzcholki_piramidy), g_wierzcholki_piramidy, GL_STATIC_DRAW);
-	
+
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[2]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_wierzcholki_kwadratu), g_wierzcholki_kwadratu, GL_STATIC_DRAW);
-	
-	
+
+
 
 
 	GLuint colorbuffer;
@@ -362,6 +367,7 @@ int main( void )
 	glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
 
+	
 
 	do{
 
@@ -372,6 +378,83 @@ int main( void )
 		glUseProgram(programID);
 
 
+		//Stablizacja czasu pojedyńczej klatki
+
+		static double lastTime = glfwGetTime();
+		double currentTime = glfwGetTime();
+		float deltaTime = float(currentTime - lastTime);
+
+
+		
+
+
+
+		//Zczytanie pozycji Myszy
+		glfwGetCursorPos(window, &xMouse, &yMouse);
+		glfwSetCursorPos(window, szerokoscEkranu/2, wysokoscEkranu/2);
+
+
+
+		katPoziomy += czuloscMyszy * float(szerokoscEkranu/2 - xMouse);
+		katPionowy += czuloscMyszy * float(wysokoscEkranu/2 - yMouse);
+
+		
+		// Wektor kierunku patrzenia
+		glm::vec3 direction(
+			cos(katPionowy) * sin(katPoziomy),
+			sin(katPionowy),
+			cos(katPionowy) * cos(katPoziomy)
+			);
+
+		// Wektor w prawo od kierunku patrzenia
+		glm::vec3 right = glm::vec3(
+			sin(katPoziomy - 3.14f/2.0f),
+			0,
+			cos(katPoziomy - 3.14f/2.0f)
+			);
+
+		// wektor w gore wyciagniety z dwoch pozostalych
+		glm::vec3 up = glm::cross( right, direction );
+
+
+		//Sterowanie chodem
+		// Move forward
+		if (glfwGetKey(window, GLFW_KEY_UP ) == GLFW_PRESS){
+			pozycja += direction * deltaTime * predkosc;
+		}
+		// Move backward
+		if (glfwGetKey(window, GLFW_KEY_DOWN ) == GLFW_PRESS){
+			pozycja -= direction * deltaTime * predkosc;
+		}
+		// Strafe right
+		if (glfwGetKey(window, GLFW_KEY_RIGHT ) == GLFW_PRESS){
+			pozycja += right * deltaTime * predkosc;
+		}
+		// Strafe left
+		if (glfwGetKey(window, GLFW_KEY_LEFT ) == GLFW_PRESS){
+			pozycja -= right * deltaTime * predkosc;
+		}
+
+		
+
+		//Macierz projekcji czyli wyświetlanego obszaru
+		Projekcja = perspective(katWidzenia, 4.0f / 3.0f, 0.1f, 100.0f);
+
+		// Macierz kamery czyli gdzie i w ktorym kierunku patrzy kamera
+		Kamera = lookAt(pozycja, pozycja + direction, up);
+
+		//Macierz modelu
+		Model = mat4(1.0f);
+
+
+		//Iloczyn Modelu, Kamery i Projekcji
+		//Ewentualnie translacji, rotacji i tak dalej
+		MVP = Projekcja*Kamera*Model;
+
+		MVPkwadratu = Projekcja*Kamera*Przesun(-4, 0, 0)*Model;
+
+		MVPkostki = Projekcja*Kamera*Przesun(4, 1, 0)*Model;
+		
 
 		glEnableVertexAttribArray(1);
 		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
@@ -386,11 +469,11 @@ int main( void )
 
 
 		// Atrybut o numerze 0 - wierzchołki
-		
+
 		glEnableVertexAttribArray(0);
 
-		
- 
+
+
 		//Wybranie macierzy MVP, wrzucanie do bufora i rysowanie kostki
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVPkostki[0][0]);
 		Draw(vertexbuffer, 0, 12);
@@ -404,7 +487,7 @@ int main( void )
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVPkwadratu[0][0]);
 		Draw(vertexbuffer, 2, 8);
 
-		
+
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
@@ -416,6 +499,11 @@ int main( void )
 		glfwPollEvents();
 
 		// Check if the ESC key was pressed or the window was closed
+
+		lastTime = currentTime;
+
+
+
 
 	}while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 		glfwWindowShouldClose(window) == 0 );

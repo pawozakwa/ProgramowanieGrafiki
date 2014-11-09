@@ -8,6 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <iostream>
+#include <iomanip>
+
+
+
 // Include GLEW
 #include <GL/glew.h>
 
@@ -23,6 +28,9 @@ using namespace glm;
 
 #include <common/shader.hpp>
 
+#include "Obiekt.h"
+
+
 mat4 Przesun(float x, float y, float z){
 
 	mat4 Przesuniecie = glm::translate(
@@ -32,6 +40,54 @@ mat4 Przesun(float x, float y, float z){
 	return Przesuniecie;
 
 }
+
+mat4 Obroc(float angle, int os){
+	//os ->     0 dla x, 1 dla y, 2 dla z
+	mat4 Obrot = mat4(1.0f);
+
+	switch (os)
+	{
+	case 0:
+		Obrot = rotate(
+			mat4(1.0f),
+			angle,
+			vec3(1.f, 0.f, 0.f));
+		return Obrot;
+	case 1:
+		Obrot = rotate(
+			mat4(1.0f),
+			angle,
+			vec3(0.f, 1.f, 0.f));
+		return Obrot;
+	case 2:
+		Obrot = rotate(
+			mat4(1.0f),
+			angle,
+			vec3(0.f, 0.f, 1.f));
+		return Obrot;
+	default:
+		cout << "Nieprawidlowy parametr osi obrotu" << endl;
+		return Obrot;
+
+	}
+
+
+}
+
+void randColors(GLfloat *tablicaKolorow){
+	int length= sizeof(tablicaKolorow) / sizeof(GLuint);
+
+	for (int i = 0; i < length; i++)
+	{
+
+		tablicaKolorow[i] += (rand() % 1000 - 500) /1000;
+		if(tablicaKolorow[i] > 1.f)
+			tablicaKolorow[i] = 1.f;
+		if(tablicaKolorow[i] < 0.f)
+			tablicaKolorow[i] = 0.f;
+	}
+}
+
 
 void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 
@@ -64,12 +120,12 @@ int main( void )
 		return -1;
 	}
 
-	vec3 pozycja = vec3(-3, 1, -5);
+	vec3 pozycja = vec3(-8, 0, 0);
 
 	int szerokoscEkranu = 1024;
 	int wysokoscEkranu = 768;
 
-	float katPoziomy = 3.14f;
+	float katPoziomy = 3.14f/4.f;
 	float katPionowy = 0.0f;
 
 	float katWidzenia = 45.0f;
@@ -78,6 +134,14 @@ int main( void )
 	float czuloscMyszy = 0.001f;
 
 	double xMouse, yMouse;
+
+	Obiekt kostka = Obiekt();
+	Obiekt kwadrat = Obiekt();
+	Obiekt piramida = Obiekt();
+
+	kwadrat.PozycjaY = -1;
+	kostka.PozycjaY = 3;
+
 
 
 	glfwWindowHint(GLFW_SAMPLES, 4);
@@ -118,7 +182,7 @@ int main( void )
 
 
 	//Deklaracje macierzy
-	mat4 Projekcja, Kamera, Model, MVP, MVPkwadratu, MVPkostki;
+	mat4 Projekcja, Kamera, Model, MVP, MVPkwadratu, MVPkostki, MVPlampy;
 
 	static const GLfloat g_wierzcholki_piramidy[] = {
 		//piramida
@@ -197,6 +261,9 @@ int main( void )
 	};
 
 
+
+
+
 	static const GLfloat g_wierzcholki_kostki[] = { 
 		//prostopadloscian
 		-1.0f,-1.0f,-1.0f, // triangle 1 : begin
@@ -251,7 +318,7 @@ int main( void )
 
 
 
-	static const GLfloat g_color_buffer_data[] = {
+	static GLfloat g_color_buffer_data[] = {
 		0.583f,  0.771f,  0.014f,
 		0.609f,  0.115f,  0.436f,
 		0.327f,  0.483f,  0.844f,
@@ -333,7 +400,31 @@ int main( void )
 		0.982f,  0.099f,  0.879f
 	};
 
+	//GLfloat *g_color_buffer_data = new GLfloat[234];
+	/*GLfloat g_color_buffer_data[234];
 
+	for (int i = 0; i < 234; i++)
+	{
+	g_color_buffer_data[i] = 0.5f;
+	}
+	*/
+
+
+
+
+	cout << "Tworzę obiekt lampy!" << endl;
+	Obiekt *lampa = new Obiekt();
+
+
+	cout << "Ładuję " << endl;
+	if(lampa->LoadModel("lamp.obj")){
+		cout << "Załadowałem lampe!" << endl;
+
+	}
+
+
+
+	//Wczytywanie obiektu
 	static const GLfloat g_element_buffer_data[] = {0, 1, 2};
 
 	// Funkcje sprawdzania glebokosci na planie
@@ -343,12 +434,8 @@ int main( void )
 	glDepthFunc(GL_LESS);
 
 
-
-
-
-
-	GLuint vertexbuffer[3];
-	glGenBuffers(3, vertexbuffer);
+	GLuint vertexbuffer[4];
+	glGenBuffers(4, vertexbuffer);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_wierzcholki_kostki), g_wierzcholki_kostki, GL_STATIC_DRAW);
@@ -361,15 +448,17 @@ int main( void )
 
 
 
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[3]);
+	//glBufferData(GL_ARRAY_BUFFER, lampa->getVertices().size()*sizeof(vec3),&lampa->getVertices()[0], GL_STATIC_DRAW);
+
 
 	GLuint colorbuffer;
 	glGenBuffers(1, &colorbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_color_buffer_data), g_color_buffer_data, GL_STATIC_DRAW);
-
-	
 
 	do{
+		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 234, g_color_buffer_data, GL_STATIC_DRAW);
+
 
 		// Clear the screen
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -384,11 +473,6 @@ int main( void )
 		double currentTime = glfwGetTime();
 		float deltaTime = float(currentTime - lastTime);
 
-
-		
-
-
-
 		//Zczytanie pozycji Myszy
 		glfwGetCursorPos(window, &xMouse, &yMouse);
 		glfwSetCursorPos(window, szerokoscEkranu/2, wysokoscEkranu/2);
@@ -398,7 +482,7 @@ int main( void )
 		katPoziomy += czuloscMyszy * float(szerokoscEkranu/2 - xMouse);
 		katPionowy += czuloscMyszy * float(wysokoscEkranu/2 - yMouse);
 
-		
+
 		// Wektor kierunku patrzenia
 		glm::vec3 direction(
 			cos(katPionowy) * sin(katPoziomy),
@@ -419,23 +503,45 @@ int main( void )
 
 		//Sterowanie chodem
 		// Move forward
-		if (glfwGetKey(window, GLFW_KEY_UP ) == GLFW_PRESS){
+		if (glfwGetKey(window, GLFW_KEY_W ) == GLFW_PRESS){
 			pozycja += direction * deltaTime * predkosc;
 		}
 		// Move backward
-		if (glfwGetKey(window, GLFW_KEY_DOWN ) == GLFW_PRESS){
+		if (glfwGetKey(window, GLFW_KEY_S ) == GLFW_PRESS){
 			pozycja -= direction * deltaTime * predkosc;
 		}
 		// Strafe right
-		if (glfwGetKey(window, GLFW_KEY_RIGHT ) == GLFW_PRESS){
+		if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS){
 			pozycja += right * deltaTime * predkosc;
 		}
 		// Strafe left
-		if (glfwGetKey(window, GLFW_KEY_LEFT ) == GLFW_PRESS){
+		if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS){
 			pozycja -= right * deltaTime * predkosc;
 		}
 
-		
+		// Obroty kostki
+		if (glfwGetKey(window, GLFW_KEY_J ) == GLFW_PRESS){
+			kostka.RotacjaY -= deltaTime * 100.f;
+			if(kostka.RotacjaY <= 0) kostka.RotacjaY = 360;
+		}
+		if (glfwGetKey(window, GLFW_KEY_L ) == GLFW_PRESS){
+			kostka.RotacjaY += deltaTime * 100.f;
+			if(kostka.RotacjaY >= 360) kostka.RotacjaY = 0;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_I ) == GLFW_PRESS){
+			kostka.RotacjaZ -= deltaTime * 100.f;
+			if(kostka.RotacjaZ <= 0) kostka.RotacjaZ = 360;
+		}
+		if (glfwGetKey(window, GLFW_KEY_K ) == GLFW_PRESS){
+			kostka.RotacjaZ += deltaTime * 100.f;
+			if(kostka.RotacjaZ >= 360) kostka.RotacjaZ = 0;
+		}
+
+
+		////////////////
+
+
 
 		//Macierz projekcji czyli wyświetlanego obszaru
 		Projekcja = perspective(katWidzenia, 4.0f / 3.0f, 0.1f, 100.0f);
@@ -451,10 +557,14 @@ int main( void )
 		//Ewentualnie translacji, rotacji i tak dalej
 		MVP = Projekcja*Kamera*Model;
 
-		MVPkwadratu = Projekcja*Kamera*Przesun(-4, 0, 0)*Model;
+		MVPkwadratu = Projekcja * Kamera * Przesun(kwadrat.PozycjaX, kwadrat.PozycjaY, kwadrat.PozycjaZ) * Model;
 
-		MVPkostki = Projekcja*Kamera*Przesun(4, 1, 0)*Model;
-		
+		MVPkostki = Projekcja * Kamera * Przesun(kostka.PozycjaX, kostka.PozycjaY, kostka.PozycjaZ)
+			* Obroc(kostka.RotacjaX,0) * Obroc(kostka.RotacjaY,1) * Obroc(kostka.RotacjaZ,2)
+			* Model;
+
+		MVPlampy = Projekcja * Kamera * Przesun(piramida.PozycjaX, piramida.PozycjaY, piramida.PozycjaZ) * Model;
+
 
 		glEnableVertexAttribArray(1);
 		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
@@ -470,9 +580,9 @@ int main( void )
 
 		// Atrybut o numerze 0 - wierzchołki
 
+
+
 		glEnableVertexAttribArray(0);
-
-
 
 		//Wybranie macierzy MVP, wrzucanie do bufora i rysowanie kostki
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVPkostki[0][0]);
@@ -488,10 +598,19 @@ int main( void )
 		Draw(vertexbuffer, 2, 8);
 
 
+		//Wybranie macierzy lapmy i wyświetlanie lampy
+		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVPlampy[0][0]);
+		Draw(vertexbuffer, 3, 12);
+
+
+
+
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
-		glDisableVertexAttribArray(2);
+
+
+
 
 
 		// Swap buffers
@@ -507,6 +626,8 @@ int main( void )
 
 	}while( glfwGetKey(window, GLFW_KEY_ESCAPE ) != GLFW_PRESS &&
 		glfwWindowShouldClose(window) == 0 );
+
+	//delete[] g_color_buffer_data;
 
 	// Cleanup VBO
 	glDeleteBuffers(2, vertexbuffer);

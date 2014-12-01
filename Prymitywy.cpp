@@ -1,5 +1,5 @@
 /************************* 
-*	Autor: Pawe≈Ç Wo≈∫nica
+*	Autor: Pawe≥ Woünica
 *
 *
 **************************/
@@ -29,6 +29,86 @@ using namespace glm;
 #include <common/shader.hpp>
 
 #include "Obiekt.h"
+
+
+GLuint loadBMP_custom(const char * imagepath){
+
+	printf("Reading image %s\n", imagepath);
+
+	// Data read from the header of the BMP file
+	unsigned char header[54];
+	unsigned int dataPos;
+	unsigned int imageSize;
+	unsigned int width, height;
+	// Actual RGB data
+	unsigned char * data;
+
+	// Open the file
+	FILE * file = fopen(imagepath,"rb");
+	if (!file)							    {printf("%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n", imagepath); getchar(); return 0;}
+
+	// Read the header, i.e. the 54 first bytes
+
+	// If less than 54 bytes are read, problem
+	if ( fread(header, 1, 54, file)!=54 ){ 
+		printf("Not a correct BMP file\n");
+		return 0;
+	}
+	// A BMP files always begins with "BM"
+	if ( header[0]!='B' || header[1]!='M' ){
+		printf("Not a correct BMP file\n");
+		return 0;
+	}
+	// Make sure this is a 24bpp file
+	if ( *(int*)&(header[0x1E])!=0  )         {printf("Not a correct BMP file\n");    return 0;}
+	if ( *(int*)&(header[0x1C])!=24 )         {printf("Not a correct BMP file\n");    return 0;}
+
+	// Read the information about the image
+	dataPos    = *(int*)&(header[0x0A]);
+	imageSize  = *(int*)&(header[0x22]);
+	width      = *(int*)&(header[0x12]);
+	height     = *(int*)&(header[0x16]);
+
+	// Some BMP files are misformatted, guess missing information
+	if (imageSize==0)    imageSize=width*height*3; // 3 : one byte for each Red, Green and Blue component
+	if (dataPos==0)      dataPos=54; // The BMP header is done that way
+
+	// Create a buffer
+	data = new unsigned char [imageSize];
+
+	// Read the actual data from the file into the buffer
+	fread(data,1,imageSize,file);
+
+	// Everything is in memory now, the file wan be closed
+	fclose (file);
+
+	// Create one OpenGL texture
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	// Give the image to OpenGL
+	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, data);
+
+	// OpenGL has now copied the data. Free our own version
+	delete [] data;
+
+	// Poor filtering, or ...
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
+
+	// ... nice trilinear filtering.
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	// Return the ID of the texture we just created
+	return textureID;
+}
 
 
 mat4 Przesun(float x, float y, float z){
@@ -91,7 +171,7 @@ void randColors(GLfloat *tablicaKolorow){
 
 void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 
-	//Funkcja rysuje dana ilosc trojkatow(3arg) na danej tablicy punkt√≥w(1arg)
+	//Funkcja rysuje dana ilosc trojkatow(3arg) na danej tablicy punktÛw(1arg)
 	//		pod podanym indeksem(2arg)
 
 	glBindBuffer(GL_ARRAY_BUFFER, tablicaBufora[indexTablicyBufora]);
@@ -142,8 +222,6 @@ int main( void )
 	kwadrat.PozycjaY = -1;
 	kostka.PozycjaY = 3;
 
-
-
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -175,6 +253,11 @@ int main( void )
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
 
+
+
+
+
+
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders( "SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader" );
 
@@ -183,6 +266,18 @@ int main( void )
 
 	//Deklaracje macierzy
 	mat4 Projekcja, Kamera, Model, MVP, MVPkwadratu, MVPkostki, MVPlampy;
+
+
+
+
+
+	GLuint Texture = loadBMP_custom("uvtemplate.bmp");
+
+	// Get a handle for our "myTextureSampler" uniform
+	GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
+
+
+
 
 	static const GLfloat g_wierzcholki_piramidy[] = {
 		//piramida
@@ -400,6 +495,50 @@ int main( void )
 		0.982f,  0.099f,  0.879f
 	};
 
+	// Two UV coordinatesfor each vertex. They were created with Blender. You'll learn shortly how to do this yourself.
+	static const GLfloat g_uv_buffer_data[] = {
+		0.000059f, 1.0f-0.000004f,
+		0.000103f, 1.0f-0.336048f,
+		0.335973f, 1.0f-0.335903f,
+		1.000023f, 1.0f-0.000013f,
+		0.667979f, 1.0f-0.335851f,
+		0.999958f, 1.0f-0.336064f,
+		0.667979f, 1.0f-0.335851f,
+		0.336024f, 1.0f-0.671877f,
+		0.667969f, 1.0f-0.671889f,
+		1.000023f, 1.0f-0.000013f,
+		0.668104f, 1.0f-0.000013f,
+		0.667979f, 1.0f-0.335851f,
+		0.000059f, 1.0f-0.000004f,
+		0.335973f, 1.0f-0.335903f,
+		0.336098f, 1.0f-0.000071f,
+		0.667979f, 1.0f-0.335851f,
+		0.335973f, 1.0f-0.335903f,
+		0.336024f, 1.0f-0.671877f,
+		1.000004f, 1.0f-0.671847f,
+		0.999958f, 1.0f-0.336064f,
+		0.667979f, 1.0f-0.335851f,
+		0.668104f, 1.0f-0.000013f,
+		0.335973f, 1.0f-0.335903f,
+		0.667979f, 1.0f-0.335851f,
+		0.335973f, 1.0f-0.335903f,
+		0.668104f, 1.0f-0.000013f,
+		0.336098f, 1.0f-0.000071f,
+		0.000103f, 1.0f-0.336048f,
+		0.000004f, 1.0f-0.671870f,
+		0.336024f, 1.0f-0.671877f,
+		0.000103f, 1.0f-0.336048f,
+		0.336024f, 1.0f-0.671877f,
+		0.335973f, 1.0f-0.335903f,
+		0.667969f, 1.0f-0.671889f,
+		1.000004f, 1.0f-0.671847f,
+		0.667979f, 1.0f-0.335851f
+	};
+
+
+
+
+
 	//GLfloat *g_color_buffer_data = new GLfloat[234];
 	/*GLfloat g_color_buffer_data[234];
 
@@ -412,13 +551,13 @@ int main( void )
 
 
 
-	cout << "Tworzƒô obiekt lampy!" << endl;
+	cout << "TworzÍ obiekt lampy!" << endl;
 	Obiekt *lampa = new Obiekt();
 
 
-	cout << "≈Åadujƒô " << endl;
+	cout << "£adujÍ " << endl;
 	if(lampa->LoadModel("lamp.obj")){
-		cout << "Za≈Çadowa≈Çem lampe!" << endl;
+		cout << "Za≥adowa≥em lampe!" << endl;
 
 	}
 
@@ -446,10 +585,15 @@ int main( void )
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[2]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_wierzcholki_kwadratu), g_wierzcholki_kwadratu, GL_STATIC_DRAW);
 
-
-
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[3]);
+	//glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[3]);
 	//glBufferData(GL_ARRAY_BUFFER, lampa->getVertices().size()*sizeof(vec3),&lampa->getVertices()[0], GL_STATIC_DRAW);
+
+	GLuint uvbuffer;
+	glGenBuffers(1, &uvbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_buffer_data), g_uv_buffer_data, GL_STATIC_DRAW);
+
+
 
 
 	GLuint colorbuffer;
@@ -467,7 +611,15 @@ int main( void )
 		glUseProgram(programID);
 
 
-		//Stablizacja czasu pojedy≈Ñczej klatki
+		// Bind our texture in Texture Unit 0
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, Texture);
+		// Set our "myTextureSampler" sampler to user Texture Unit 0
+		glUniform1i(TextureID, 0);
+
+
+
+		//Stablizacja czasu pojedyÒczej klatki
 
 		static double lastTime = glfwGetTime();
 		double currentTime = glfwGetTime();
@@ -543,7 +695,7 @@ int main( void )
 
 
 
-		//Macierz projekcji czyli wy≈õwietlanego obszaru
+		//Macierz projekcji czyli wyúwietlanego obszaru
 		Projekcja = perspective(katWidzenia, 4.0f / 3.0f, 0.1f, 100.0f);
 
 		// Macierz kamery czyli gdzie i w ktorym kierunku patrzy kamera
@@ -565,7 +717,7 @@ int main( void )
 
 		MVPlampy = Projekcja * Kamera * Przesun(piramida.PozycjaX, piramida.PozycjaY, piramida.PozycjaZ) * Model;
 
-
+		/*
 		glEnableVertexAttribArray(1);
 		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
 		glVertexAttribPointer(
@@ -576,9 +728,21 @@ int main( void )
 			0,					// stride
 			(void*)0			// array buffer offset
 			);
+			*/
+		// 2nd attribute buffer : UVs
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+		glVertexAttribPointer(
+			1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+			2,                                // size : U+V => 2
+			GL_FLOAT,                         // type
+			GL_FALSE,                         // normalized?
+			0,                                // stride
+			(void*)0                          // array buffer offset
+		);
 
 
-		// Atrybut o numerze 0 - wierzcho≈Çki
+		// Atrybut o numerze 0 - wierzcho≥ki
 
 
 
@@ -598,7 +762,7 @@ int main( void )
 		Draw(vertexbuffer, 2, 8);
 
 
-		//Wybranie macierzy lapmy i wy≈õwietlanie lampy
+		//Wybranie macierzy lapmy i wyúwietlanie lampy
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVPlampy[0][0]);
 		Draw(vertexbuffer, 3, 12);
 

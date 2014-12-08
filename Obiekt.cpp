@@ -41,7 +41,7 @@ private:
 */
 Obiekt::Obiekt()
 {
-	//Obiekt::LoadModel();
+	Obiekt::LoadModel("lamp.obj");
 	RotacjaZ = RotacjaY = RotacjaX = 0;	
 	PozycjaX = PozycjaY = PozycjaZ = 0;
 	PredkoscX = PredkoscY = PredkoscZ = 0;
@@ -52,8 +52,17 @@ Obiekt::~Obiekt()
 {
 }
 
+
 vector<vec3> Obiekt::getVertices(){
 	return out_vertices;
+}
+
+vector<vec2> Obiekt::getUvs(){
+	return out_uvs;
+}
+
+vector<vec3> Obiekt::getNormals(){
+	return out_normals;
 }
 
 bool Obiekt::LoadModel(char *path){
@@ -74,14 +83,17 @@ bool Obiekt::LoadModel(char *path){
 			vec3 v;
 			fscanf(f, "%f %f %f/n", &v.x, &v.y, &v.z);
 			vertices.push_back(v);
+
 		}else if ( strcmp( lineHeader, "vt" ) == 0 ){
-			glm::vec2 uv;
+			vec2 uv;
 			fscanf(f, "%f %f\n", &uv.x, &uv.y );
 			uvs.push_back(uv);
+
 		}else if ( strcmp( lineHeader, "vn" ) == 0 ){
-			glm::vec3 normal;
+			vec3 normal;
 			fscanf(f, "%f %f %f\n", &normal.x, &normal.y, &normal.z );
 			normals.push_back(normal);
+
 		}else if ( strcmp( lineHeader, "f" ) == 0 ){
 			string vertex1, vertex2, vertex3;
 			unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
@@ -100,6 +112,10 @@ bool Obiekt::LoadModel(char *path){
 			normalIndices.push_back(normalIndex[1]);
 			normalIndices.push_back(normalIndex[2]);
 
+		}else{
+			// Probably a comment, eat up the rest of the line
+			char stupidBuffer[1000];
+			fgets(stupidBuffer, 1000, f);
 		}
 	}
 
@@ -108,17 +124,15 @@ bool Obiekt::LoadModel(char *path){
 		unsigned int vertexIndex = vertexIndices[i];
 		vec3 vertex = vertices[vertexIndex-1];
 		out_vertices.push_back(vertex);
-	}
+	
 
 	//Dla  UVs
-	for( unsigned int i=0; i<uvIndices.size(); i++ ){
 		unsigned int uvIndex = uvIndices[i];
 		vec2 uv = uvs[uvIndex-1];
 		out_uvs.push_back(uv);
-	}
+	
 
 	//Dla normalnych
-	for( unsigned int i=0; i<normalIndices.size(); i++ ){
 		unsigned int normalIndex = normalIndices[i];
 		vec3 normal = vertices[normalIndex-1];
 		out_normals.push_back(normal);

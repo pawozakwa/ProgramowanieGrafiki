@@ -26,7 +26,8 @@ public:
 	bool LoadModel(char* path);
 
 	vector<vec3> getVertices();
-
+	vector<vec2> getUvs();
+	vector<vec3> getNormals();
 
 	float RotacjaX, RotacjaY, RotacjaZ;
 	int PozycjaX ,PozycjaY, PozycjaZ;

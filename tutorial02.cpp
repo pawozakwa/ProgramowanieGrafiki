@@ -31,6 +31,98 @@ using namespace glm;
 #include "Obiekt.h"
 
 
+bool loadOBJ(
+	const char * path, 
+	std::vector<glm::vec3> & out_vertices, 
+	std::vector<glm::vec2> & out_uvs,
+	std::vector<glm::vec3> & out_normals
+){
+	printf("Loading OBJ file %s...\n", path);
+
+	std::vector<unsigned int> vertexIndices, uvIndices, normalIndices;
+	std::vector<glm::vec3> temp_vertices; 
+	std::vector<glm::vec2> temp_uvs;
+	std::vector<glm::vec3> temp_normals;
+
+
+	FILE * file = fopen(path, "r");
+	if( file == NULL ){
+		printf("Impossible to open the file ! Are you in the right path ? See Tutorial 1 for details\n");
+		getchar();
+		return false;
+	}
+
+	while( 1 ){
+
+		char lineHeader[128];
+		// read the first word of the line
+		int res = fscanf(file, "%s", lineHeader);
+		if (res == EOF)
+			break; // EOF = End Of File. Quit the loop.
+
+		// else : parse lineHeader
+		
+		if ( strcmp( lineHeader, "v" ) == 0 ){
+			glm::vec3 vertex;
+			fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z );
+			temp_vertices.push_back(vertex);
+		}else if ( strcmp( lineHeader, "vt" ) == 0 ){
+			glm::vec2 uv;
+			fscanf(file, "%f %f\n", &uv.x, &uv.y );
+			uv.y = -uv.y; // Invert V coordinate since we will only use DDS texture, which are inverted. Remove if you want to use TGA or BMP loaders.
+			temp_uvs.push_back(uv);
+		}else if ( strcmp( lineHeader, "vn" ) == 0 ){
+			glm::vec3 normal;
+			fscanf(file, "%f %f %f\n", &normal.x, &normal.y, &normal.z );
+			temp_normals.push_back(normal);
+		}else if ( strcmp( lineHeader, "f" ) == 0 ){
+			std::string vertex1, vertex2, vertex3;
+			unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
+			int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2] );
+			if (matches != 9){
+				printf("File can't be read by our simple parser :-( Try exporting with other options\n");
+				return false;
+			}
+			vertexIndices.push_back(vertexIndex[0]);
+			vertexIndices.push_back(vertexIndex[1]);
+			vertexIndices.push_back(vertexIndex[2]);
+			uvIndices    .push_back(uvIndex[0]);
+			uvIndices    .push_back(uvIndex[1]);
+			uvIndices    .push_back(uvIndex[2]);
+			normalIndices.push_back(normalIndex[0]);
+			normalIndices.push_back(normalIndex[1]);
+			normalIndices.push_back(normalIndex[2]);
+		}else{
+			// Probably a comment, eat up the rest of the line
+			char stupidBuffer[1000];
+			fgets(stupidBuffer, 1000, file);
+		}
+
+	}
+
+	// For each vertex of each triangle
+	for( unsigned int i=0; i<vertexIndices.size(); i++ ){
+
+		// Get the indices of its attributes
+		unsigned int vertexIndex = vertexIndices[i];
+		unsigned int uvIndex = uvIndices[i];
+		unsigned int normalIndex = normalIndices[i];
+		
+		// Get the attributes thanks to the index
+		glm::vec3 vertex = temp_vertices[ vertexIndex-1 ];
+		glm::vec2 uv = temp_uvs[ uvIndex-1 ];
+		glm::vec3 normal = temp_normals[ normalIndex-1 ];
+		
+		// Put the attributes in buffers
+		out_vertices.push_back(vertex);
+		out_uvs     .push_back(uv);
+		out_normals .push_back(normal);
+	
+	}
+
+	return true;
+}
+
 GLuint loadBMP_custom(const char * imagepath){
 
 	printf("Reading image %s\n", imagepath);
@@ -110,7 +202,6 @@ GLuint loadBMP_custom(const char * imagepath){
 	return textureID;
 }
 
-
 mat4 Przesun(float x, float y, float z){
 
 	mat4 Przesuniecie = glm::translate(
@@ -168,7 +259,6 @@ void randColors(GLfloat *tablicaKolorow){
 	}
 }
 
-
 void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 
 	//Funkcja rysuje dana ilosc trojkatow(3arg) na danej tablicy punktów(1arg)
@@ -189,7 +279,6 @@ void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 	glDrawArrays(GL_TRIANGLES, 0, iloscTrojkatow*3); // 12 trojkatow
 
 }
-
 
 int main( void )
 {
@@ -219,8 +308,11 @@ int main( void )
 	Obiekt kwadrat = Obiekt();
 	Obiekt piramida = Obiekt();
 
+	Obiekt lampa = Obiekt();
+
 	kwadrat.PozycjaY = -1;
 	kostka.PozycjaY = 3;
+	lampa.PozycjaZ = 5;
 
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -551,18 +643,6 @@ int main( void )
 
 
 
-	cout << "Tworzê obiekt lampy!" << endl;
-	Obiekt *lampa = new Obiekt();
-
-
-	cout << "£adujê " << endl;
-	if(lampa->LoadModel("lamp.obj")){
-		cout << "Za³adowa³em lampe!" << endl;
-
-	}
-
-
-
 	//Wczytywanie obiektu
 	static const GLfloat g_element_buffer_data[] = {0, 1, 2};
 
@@ -573,6 +653,19 @@ int main( void )
 	glDepthFunc(GL_LESS);
 
 
+	
+	// Read our .obj file
+	std::vector<glm::vec3> vertices;
+	std::vector<glm::vec2> uvs;
+	std::vector<glm::vec3> normals; // Won't be used at the moment.
+	bool res = loadOBJ("lamp.obj", vertices, uvs, normals);
+
+	glm::vec3* tmp_tab = new vec3[vertices.size()];
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		tmp_tab[i] = vertices.at(i);
+	}
+
 	GLuint vertexbuffer[4];
 	glGenBuffers(4, vertexbuffer);
 
@@ -581,16 +674,16 @@ int main( void )
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[1]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_wierzcholki_piramidy), g_wierzcholki_piramidy, GL_STATIC_DRAW);
-
+	
 	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[2]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_wierzcholki_kwadratu), g_wierzcholki_kwadratu, GL_STATIC_DRAW);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[3]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(tmp_tab) * 3, &tmp_tab, GL_STATIC_DRAW);
 
-	//glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer[3]);
-	//glBufferData(GL_ARRAY_BUFFER, lampa->getVertices().size()*sizeof(vec3),&lampa->getVertices()[0], GL_STATIC_DRAW);
-
-	GLuint uvbuffer;
-	glGenBuffers(1, &uvbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+	GLuint uvbuffer[2];
+	glGenBuffers(2, uvbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_buffer_data), g_uv_buffer_data, GL_STATIC_DRAW);
 
 
@@ -715,7 +808,9 @@ int main( void )
 			* Obroc(kostka.RotacjaX,0) * Obroc(kostka.RotacjaY,1) * Obroc(kostka.RotacjaZ,2)
 			* Model;
 
-		MVPlampy = Projekcja * Kamera * Przesun(piramida.PozycjaX, piramida.PozycjaY, piramida.PozycjaZ) * Model;
+		MVPlampy = Projekcja * Kamera * Przesun(lampa.PozycjaX, lampa.PozycjaY, lampa.PozycjaZ)
+			* Obroc(kostka.RotacjaX,0) * Obroc(kostka.RotacjaY,1) * Obroc(kostka.RotacjaZ,2)
+			* Model;
 
 		/*
 		glEnableVertexAttribArray(1);
@@ -731,7 +826,7 @@ int main( void )
 			*/
 		// 2nd attribute buffer : UVs
 		glEnableVertexAttribArray(1);
-		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
 		glVertexAttribPointer(
 			1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
 			2,                                // size : U+V => 2
@@ -764,18 +859,13 @@ int main( void )
 
 		//Wybranie macierzy lapmy i wyœwietlanie lampy
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVPlampy[0][0]);
-		Draw(vertexbuffer, 3, 12);
-
-
-
-
+		Draw(vertexbuffer, 3, 20);
+		
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
 
-
-
-
+		
 
 		// Swap buffers
 		glfwSwapBuffers(window);

@@ -27,6 +27,7 @@ GLFWwindow* window;
 using namespace glm;
 
 #include <common/shader.hpp>
+#include <common/text2D.hpp>
 
 #include "Obiekt.h"
 
@@ -263,6 +264,8 @@ void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 
 	//Funkcja rysuje dana ilosc trojkatow(3arg) na danej tablicy punktów(1arg)
 	//		pod podanym indeksem(2arg)
+
+
 
 	glBindBuffer(GL_ARRAY_BUFFER, tablicaBufora[indexTablicyBufora]);
 	glVertexAttribPointer(
@@ -700,6 +703,16 @@ int main( void )
 	GLuint colorbuffer;
 	glGenBuffers(1, &colorbuffer);
 
+
+	// Get a handle for our "LightPosition" uniform
+	glUseProgram(programID);
+	GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
+
+
+
+	// Initialize our little text library with the Holstein font
+	initText2D( "Holstein.DDS" );
+
 	do{
 		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 234, g_color_buffer_data, GL_STATIC_DRAW);
@@ -725,6 +738,12 @@ int main( void )
 		static double lastTime = glfwGetTime();
 		double currentTime = glfwGetTime();
 		float deltaTime = float(currentTime - lastTime);
+
+
+
+
+
+
 
 		//Zczytanie pozycji Myszy
 		glfwGetCursorPos(window, &xMouse, &yMouse);
@@ -858,7 +877,10 @@ int main( void )
 			);
 
 		// Atrybut o numerze 0 - wierzcho³ki
+	
 
+		glm::vec3 lightPos = glm::vec3(1,0,4);
+		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
 
 		glEnableVertexAttribArray(0);
@@ -886,6 +908,10 @@ int main( void )
 		glDisableVertexAttribArray(1);
 
 
+		char text[256];
+		sprintf(text,"%.2f sec", glfwGetTime() );
+		printText2D(text, 10, 500, 60);
+
 
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -907,6 +933,9 @@ int main( void )
 	glDeleteBuffers(2, vertexbuffer);
 	glDeleteVertexArrays(1, &VertexArrayID);
 	glDeleteProgram(programID);
+
+
+	cleanupText2D();
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();

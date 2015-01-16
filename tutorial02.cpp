@@ -246,20 +246,6 @@ mat4 Obroc(float angle, int os){
 
 }
 
-void randColors(GLfloat *tablicaKolorow){
-	int length= sizeof(tablicaKolorow) / sizeof(GLuint);
-
-	for (int i = 0; i < length; i++)
-	{
-
-		tablicaKolorow[i] += (rand() % 1000 - 500) /1000;
-		if(tablicaKolorow[i] > 1.f)
-			tablicaKolorow[i] = 1.f;
-		if(tablicaKolorow[i] < 0.f)
-			tablicaKolorow[i] = 0.f;
-	}
-}
-
 void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 
 	//Funkcja rysuje dana ilosc trojkatow(3arg) na danej tablicy punktów(1arg)
@@ -268,6 +254,7 @@ void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 
 
 	glBindBuffer(GL_ARRAY_BUFFER, tablicaBufora[indexTablicyBufora]);
+	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(
 		0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
 		3,                  // size
@@ -279,7 +266,7 @@ void Draw(GLuint tablicaBufora[], int indexTablicyBufora, int iloscTrojkatow){
 
 
 	// Rysuj Prymitywy !
-	glDrawArrays(GL_TRIANGLES, 0, iloscTrojkatow*3); // 12 trojkatow
+	glDrawArrays(GL_TRIANGLES, 0, iloscTrojkatow * 3); // 12 trojkatow
 
 }
 
@@ -342,38 +329,41 @@ int main( void )
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
 	// Dark blue background
-	glClearColor(0.f, 0.3f, 0.1f, 0.0f);
+	glClearColor(0.3f, 0.3f, 0.3f, 0.0f);
+
+	
+	// Funkcje sprawdzania glebokosci na planie
+	glEnable(GL_DEPTH_TEST);
+
+	// Wyswietl fragment jezeli jest blizej kamery
+	glDepthFunc(GL_LESS);
+
+	// Nie wyswietlaj trojkatow ktorych powierznia nie jest do kamery
+	//glEnable(GL_CULL_FACE);
 
 	GLuint VertexArrayID;
 	glGenVertexArrays(1, &VertexArrayID);
 	glBindVertexArray(VertexArrayID);
 
-
-
-
-
-
-	// Create and compile our GLSL program from the shaders
+	// Kompilacja shaderow i pobranie uchwytow
 	GLuint programID = LoadShaders( "SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader" );
 
-	GLuint MatrixID = glGetUniformLocation(programID, "MVP");
 
+	// Pobranie uchwytow do macierzy w shaderze
+	GLuint MatrixID = glGetUniformLocation(programID, "MVP");
+	GLuint ViewMatrixID = glGetUniformLocation(programID, "V");
+	GLuint ModelMatrixID = glGetUniformLocation(programID, "M");
 
 	//Deklaracje macierzy
 	mat4 Projekcja, Kamera, Model, MVP, MVPkwadratu, MVPkostki, MVPlampy;
 
-
-
-
-
+	//Wczytanie tekstury
 	GLuint Texture = loadBMP_custom("uvtemplate.bmp");
 
-	// Get a handle for our "myTextureSampler" uniform
+	// Pobranie uchwytu do tekstury w shaderze
 	GLuint TextureID  = glGetUniformLocation(programID, "myTextureSampler");
 
-
-
-
+	// Deklaracje meshy nie wczytywanych z pliku
 	static const GLfloat g_wierzcholki_piramidy[] = {
 		//piramida
 
@@ -449,11 +439,7 @@ int main( void )
 		0.0f, 0.0f,-2.0f,
 		-1.0f, 0.0f,-1.0f
 	};
-
-
-
-
-
+	
 	static const GLfloat g_wierzcholki_kostki[] = { 
 		//prostopadloscian
 		-1.0f,-1.0f,-1.0f, // triangle 1 : begin
@@ -505,91 +491,6 @@ int main( void )
 		1.0f,-1.0f, 1.0f
 	};
 
-
-
-
-	static GLfloat g_color_buffer_data[] = {
-		0.583f,  0.771f,  0.014f,
-		0.609f,  0.115f,  0.436f,
-		0.327f,  0.483f,  0.844f,
-		0.822f,  0.569f,  0.201f,
-		0.435f,  0.602f,  0.223f,
-		0.310f,  0.747f,  0.185f,
-		0.597f,  0.770f,  0.761f,
-		0.559f,  0.436f,  0.730f,
-		0.359f,  0.583f,  0.152f,
-		0.483f,  0.596f,  0.789f,
-		0.559f,  0.861f,  0.639f,
-		0.195f,  0.548f,  0.859f,
-		0.014f,  0.184f,  0.576f,
-		0.771f,  0.328f,  0.970f,
-		0.406f,  0.615f,  0.116f,
-		0.676f,  0.977f,  0.133f,
-		0.971f,  0.572f,  0.833f,
-		0.140f,  0.616f,  0.489f,
-		0.997f,  0.513f,  0.064f,
-		0.945f,  0.719f,  0.592f,
-		0.543f,  0.021f,  0.978f,
-		0.279f,  0.317f,  0.505f,
-		0.167f,  0.620f,  0.077f,
-		0.347f,  0.857f,  0.137f,
-		0.055f,  0.953f,  0.042f,
-		0.714f,  0.505f,  0.345f,
-		0.783f,  0.290f,  0.734f,
-		0.722f,  0.645f,  0.174f,
-		0.302f,  0.455f,  0.848f,
-		0.225f,  0.587f,  0.040f,
-		0.517f,  0.713f,  0.338f,
-		0.053f,  0.959f,  0.120f,
-		0.393f,  0.621f,  0.362f,
-		0.673f,  0.211f,  0.457f,
-		0.820f,  0.883f,  0.371f,
-		0.982f,  0.099f,  0.879f,
-		0.583f,  0.771f,  0.014f,
-		0.609f,  0.115f,  0.436f,
-		0.327f,  0.483f,  0.844f,
-		0.822f,  0.569f,  0.201f,
-		0.435f,  0.602f,  0.223f,
-		0.310f,  0.747f,  0.185f,
-		0.597f,  0.770f,  0.761f,
-		0.559f,  0.436f,  0.730f,
-		0.359f,  0.583f,  0.152f,
-		0.483f,  0.596f,  0.789f,
-		0.559f,  0.861f,  0.639f,
-		0.195f,  0.548f,  0.859f,
-		0.310f,  0.747f,  0.185f,
-		0.597f,  0.770f,  0.761f,
-		0.559f,  0.436f,  0.730f,
-		0.359f,  0.583f,  0.152f,
-		0.483f,  0.596f,  0.789f,
-		0.559f,  0.861f,  0.639f,
-		0.195f,  0.548f,  0.859f,
-		0.014f,  0.184f,  0.576f,
-		0.771f,  0.328f,  0.970f,
-		0.406f,  0.615f,  0.116f,
-		0.676f,  0.977f,  0.133f,
-		0.971f,  0.572f,  0.833f,
-		0.140f,  0.616f,  0.489f,
-		0.997f,  0.513f,  0.064f,
-		0.945f,  0.719f,  0.592f,
-		0.543f,  0.021f,  0.978f,
-		0.279f,  0.317f,  0.505f,
-		0.167f,  0.620f,  0.077f,
-		0.347f,  0.857f,  0.137f,
-		0.055f,  0.953f,  0.042f,
-		0.714f,  0.505f,  0.345f,
-		0.783f,  0.290f,  0.734f,
-		0.722f,  0.645f,  0.174f,
-		0.302f,  0.455f,  0.848f,
-		0.225f,  0.587f,  0.040f,
-		0.517f,  0.713f,  0.338f,
-		0.053f,  0.959f,  0.120f,
-		0.393f,  0.621f,  0.362f,
-		0.673f,  0.211f,  0.457f,
-		0.820f,  0.883f,  0.371f,
-		0.982f,  0.099f,  0.879f
-	};
-
 	// Two UV coordinatesfor each vertex. They were created with Blender. You'll learn shortly how to do this yourself.
 	static const GLfloat g_uv_buffer_data[] = {
 		0.000059f, 1.0f-0.000004f,
@@ -631,43 +532,11 @@ int main( void )
 	};
 
 
-
-
-
-	//GLfloat *g_color_buffer_data = new GLfloat[234];
-	/*GLfloat g_color_buffer_data[234];
-
-	for (int i = 0; i < 234; i++)
-	{
-	g_color_buffer_data[i] = 0.5f;
-	}
-	*/
-
-
-
-
-	//Wczytywanie obiektu
-	static const GLfloat g_element_buffer_data[] = {0, 1, 2};
-
-	// Funkcje sprawdzania glebokosci na planie
-	glEnable(GL_DEPTH_TEST);
-
-	// Wyswietl fragment jezeli jest blizej kamery
-	glDepthFunc(GL_LESS);
-
-
-
-	// Read our .obj file
+	// Wczytywanie obiektu z pliku .obj
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec2> uvs;
 	std::vector<glm::vec3> normals; // Won't be used at the moment.
 	bool res = loadOBJ("cube.obj", vertices, uvs, normals);
-
-	glm::vec3* tmp_tab = new vec3[vertices.size()];
-	for (int i = 0; i < vertices.size(); i++)
-	{
-		tmp_tab[i] = vertices.at(i);
-	}
 
 	GLuint vertexbuffer[4];
 	glGenBuffers(4, vertexbuffer);
@@ -687,43 +556,37 @@ int main( void )
 
 	GLuint uvbuffer[2];
 	glGenBuffers(2, uvbuffer);
+
 	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(g_uv_buffer_data), g_uv_buffer_data, GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
+	glBufferData(GL_ARRAY_BUFFER, uvs.size() * sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+
+
+
+
 
 
 	GLuint normalbuffer;
 	glGenBuffers(1, &normalbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
 	glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
+	
 
-
-
-
-
-	GLuint colorbuffer;
-	glGenBuffers(1, &colorbuffer);
-
-
-	// Get a handle for our "LightPosition" uniform
+	// Pobranie uchwytu do pozycji swiatla w shaderze
 	glUseProgram(programID);
 	GLuint LightID = glGetUniformLocation(programID, "LightPosition_worldspace");
 
-
-
-	// Initialize our little text library with the Holstein font
+	// Inicjalizacja tekstury z czcionka
 	initText2D( "Holstein.DDS" );
 
 	do{
-		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 234, g_color_buffer_data, GL_STATIC_DRAW);
-
-
 		// Clear the screen
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Use our shader
 		glUseProgram(programID);
-
 
 		// Bind our texture in Texture Unit 0
 		glActiveTexture(GL_TEXTURE0);
@@ -731,29 +594,18 @@ int main( void )
 		// Set our "myTextureSampler" sampler to user Texture Unit 0
 		glUniform1i(TextureID, 0);
 
-
-
 		//Stablizacja czasu pojedyñczej klatki
 
 		static double lastTime = glfwGetTime();
 		double currentTime = glfwGetTime();
 		float deltaTime = float(currentTime - lastTime);
 
-
-
-
-
-
-
 		//Zczytanie pozycji Myszy
 		glfwGetCursorPos(window, &xMouse, &yMouse);
 		glfwSetCursorPos(window, szerokoscEkranu/2, wysokoscEkranu/2);
 
-
-
 		katPoziomy += czuloscMyszy * float(szerokoscEkranu/2 - xMouse);
 		katPionowy += czuloscMyszy * float(wysokoscEkranu/2 - yMouse);
-
 
 		// Wektor kierunku patrzenia
 		glm::vec3 direction(
@@ -824,6 +676,8 @@ int main( void )
 		//Macierz modelu
 		Model = mat4(1.0f);
 
+		mat4 ModelLampy = Przesun(lampa.PozycjaX, lampa.PozycjaY, lampa.PozycjaZ)
+			* Obroc(kostka.RotacjaX,0) * Obroc(kostka.RotacjaY,1) * Obroc(kostka.RotacjaZ,2);
 
 		//Iloczyn Modelu, Kamery i Projekcji
 		//Ewentualnie translacji, rotacji i tak dalej
@@ -835,22 +689,10 @@ int main( void )
 			* Obroc(kostka.RotacjaX,0) * Obroc(kostka.RotacjaY,1) * Obroc(kostka.RotacjaZ,2)
 			* Model;
 
-		MVPlampy = Projekcja * Kamera * Przesun(lampa.PozycjaX, lampa.PozycjaY, lampa.PozycjaZ)
-			* Obroc(kostka.RotacjaX,0) * Obroc(kostka.RotacjaY,1) * Obroc(kostka.RotacjaZ,2)
-			* Model;
-
-		/*
-		glEnableVertexAttribArray(1);
-		glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
-		glVertexAttribPointer(
-		1,					// attribute. No particular reason for 1, but must match the layout in the shader.
-		3,					// size
-		GL_FLOAT,			// type
-		GL_FALSE,			// normalized?
-		0,					// stride
-		(void*)0			// array buffer offset
-		);
-		*/
+		MVPlampy = Projekcja * Kamera * ModelLampy;
+		
+		
+		glUniformMatrix4fv(ViewMatrixID, 1, GL_FALSE, &Kamera[0][0]);
 
 		// 2nd attribute buffer : UVs
 		glEnableVertexAttribArray(1);
@@ -877,9 +719,9 @@ int main( void )
 			);
 
 		// Atrybut o numerze 0 - wierzcho³ki
-	
 
-		glm::vec3 lightPos = glm::vec3(1,0,4);
+
+		glm::vec3 lightPos = glm::vec3(4,6,5);
 		glUniform3f(LightID, lightPos.x, lightPos.y, lightPos.z);
 
 
@@ -898,14 +740,25 @@ int main( void )
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVPkwadratu[0][0]);
 		Draw(vertexbuffer, 2, 8);
 
+		glBindBuffer(GL_ARRAY_BUFFER, uvbuffer[1]);
+		glVertexAttribPointer(
+			1,                                // attribute. No particular reason for 1, but must match the layout in the shader.
+			2,                                // size : U+V => 2
+			GL_FLOAT,                         // type
+			GL_FALSE,                         // normalized?
+			0,                                // stride
+			(void*)0                          // array buffer offset
+			);
 
-		//Wybranie macierzy lapmy i wyœwietlanie lampy
+		//Wybranie macierzy kostki i wyœwietlanie kostki
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVPlampy[0][0]);
+		glUniformMatrix4fv(ModelMatrixID, 1, GL_FALSE, &ModelLampy[0][0]);
 		Draw(vertexbuffer, 3, 20);
 
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
 
 
 		char text[256];

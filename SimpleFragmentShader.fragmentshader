@@ -20,7 +20,7 @@ void main()
 	// Wartosci dla emitowanego swiatla
 	// na razie stale
 	vec3 LightColor = vec3(1,1,1);
-	float LightPower = 5000.0f;
+	float LightPower = 50.0f;
 
 	// Parametry materialu
 	vec3 MaterialDiffuseColor = texture2D( myTextureSampler, UV ).rgb;
@@ -41,7 +41,7 @@ void main()
 	//  - light is behind the triangle -> 0
 	float cosTheta = clamp( dot( n,l ), 0,1 );
 	
-	// Eye vector (towards the camera)
+	// Eye vector (towards the camera)LightColor
 	vec3 E = normalize(EyeDirection_cameraspace);
 	// Direction in which the triangle reflects the light
 	vec3 R = reflect(-l,n);
@@ -55,7 +55,7 @@ void main()
 		// Ambient : simulates indirect lighting
 		MaterialAmbientColor +
 		// Diffuse : "color" of the object
-		MaterialDiffuseColor * LightColor * LightPower * cosTheta / (distance*distance) +
+		MaterialDiffuseColor * LightPower * cosTheta / (distance*distance) +
 		// Specular : reflective highlight, like a mirror
 		MaterialSpecularColor * LightColor * LightPower * pow(cosAlpha,5) / (distance*distance);
 

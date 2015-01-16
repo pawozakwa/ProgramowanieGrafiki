@@ -141,3 +141,4 @@ bool Obiekt::LoadModel(char *path){
 	return true;
 
 }
+
